@@ -287,7 +287,6 @@ J1850VPW* J1850VPW::onError(onErrorHandler errHandler)
 int8_t J1850VPW::tryGetReceivedFrame(uint8_t* pBuff, bool justValid /*= true*/)
 {
     uint8_t size;
-    bool crcOK = true;
 
     while (true)
     {
@@ -297,9 +296,11 @@ int8_t J1850VPW::tryGetReceivedFrame(uint8_t* pBuff, bool justValid /*= true*/)
         {
             return 0;
         }
-        if (crc(pBuff, size - 1) != pBuff[size - 1])
+        // Checked per frame: one bad frame must not cause the good frames
+        // queued behind it to be discarded too.
+        bool crcOK = crc(pBuff, size - 1) == pBuff[size - 1];
+        if (!crcOK)
         {
-            crcOK = false;
             handleErrorsInternal(J1850_Read, J1850_ERR_CRC);
         }
         if (!justValid || crcOK)
